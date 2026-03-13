@@ -83,7 +83,7 @@
     };
 
     // URL to the profile.html web form (host this file and set URL here)
-    var PROFILE_FORM_URL = 'https://ruy.se/iptv/profile.html';
+    var PROFILE_FORM_URL = 'https://areyouwhy.github.io/iptv-player/profile.html';
     var userProfiles = [];
     var activeProfile = null;
 
