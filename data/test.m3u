@@ -1,0 +1,21 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="svt1" tvg-name="SVT1" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/SVT1_logo_2016.svg/200px-SVT1_logo_2016.svg.png" group-title="Swedish TV",SVT1
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+#EXTINF:-1 tvg-id="svt2" tvg-name="SVT2" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/SVT2_logo_2016.svg/200px-SVT2_logo_2016.svg.png" group-title="Swedish TV",SVT2
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4
+#EXTINF:-1 tvg-id="tv4" tvg-name="TV4" tvg-logo="" group-title="Swedish TV",TV4
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
+#EXTINF:-1 tvg-id="bbc1" tvg-name="BBC One" tvg-logo="" group-title="UK TV",BBC One
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4
+#EXTINF:-1 tvg-id="bbc2" tvg-name="BBC Two" tvg-logo="" group-title="UK TV",BBC Two
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4
+#EXTINF:-1 tvg-id="cnn" tvg-name="CNN" tvg-logo="" group-title="News",CNN
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4
+#EXTINF:-1 tvg-id="sky" tvg-name="Sky News" tvg-logo="" group-title="News",Sky News
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4
+#EXTINF:-1 tvg-id="espn" tvg-name="ESPN" tvg-logo="" group-title="Sports",ESPN
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4
+#EXTINF:-1 tvg-id="eurosport" tvg-name="Eurosport" tvg-logo="" group-title="Sports",Eurosport
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4
+#EXTINF:-1 tvg-id="hbo" tvg-name="HBO" tvg-logo="" group-title="Movies",HBO
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4

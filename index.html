@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1920, initial-scale=1.0">
+    <title>IPTV Player</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+
+        <!-- ── AVPlay — always fullscreen behind everything ── -->
+        <div id="player-container">
+            <object id="av-player" type="application/avplayer"></object>
+        </div>
+
+        <!-- ── Loading screen ── -->
+        <div id="loading">
+            <div id="loading-box">
+                <div id="loading-hello">hello...</div>
+                <div id="loading-lines">
+                    <div id="loading-cat"></div>
+                    <div id="loading-ch"></div>
+                </div>
+                <div id="loading-brand">
+                    <div>ruy.se</div>
+                    <div class="version">v 0.1</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Home screen ── -->
+        <div id="home-screen" class="screen hidden">
+            <div id="home-left">
+                <div id="home-header">what you do?</div>
+                <div id="home-list"></div>
+            </div>
+            <div id="home-right">
+                <img id="welcome-img" src="assets/welcome_img.jpg" alt="" />
+            </div>
+        </div>
+
+        <!-- ── Channel/browse screen (split view overlay) ── -->
+        <div id="channel-screen" class="screen hidden">
+            <div id="panel-left">
+                <div id="panel-title"></div>
+                <div id="filter-bar" class="hidden">
+                    <span class="filter-label">Filter:</span>
+                    <input type="text" id="filter-input" placeholder="" autocomplete="off" />
+                </div>
+                <div id="channel-list"></div>
+            </div>
+            <div id="panel-right">
+                <div id="now-playing">
+                    <div id="np-title"></div>
+                    <div id="np-info"></div>
+                </div>
+                <div id="video-window">
+                    <!-- This is transparent — AVPlay renders behind it -->
+                </div>
+                <div id="fullscreen-hint">Full screen</div>
+            </div>
+        </div>
+
+        <!-- ── Fullscreen overlay (just the info bar, player is already fullscreen) ── -->
+        <div id="fs-overlay" class="hidden">
+            <div id="fs-channel-info"></div>
+        </div>
+
+        <div id="buffering">buffering...</div>
+
+        <!-- ── Footer ── -->
+        <div id="footer">
+            <div id="footer-left"><span id="clock"></span></div>
+            <div id="footer-right">ruy.se - v 0.1</div>
+        </div>
+
+        <!-- ── Profile dialog (manual) ── -->
+        <div id="profile-dialog" class="hidden">
+            <div id="profile-dialog-box">
+                <div id="profile-dialog-title">Add profile</div>
+                <div class="pd-field">
+                    <label class="pd-label">Name</label>
+                    <input type="text" id="pd-name" class="pd-input" placeholder="display name" autocomplete="off" />
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Username</label>
+                    <input type="text" id="pd-username" class="pd-input" placeholder="playlist credential" autocomplete="off" />
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Password</label>
+                    <input type="text" id="pd-password" class="pd-input" autocomplete="off" />
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Search keywords</label>
+                    <input type="text" id="pd-keywords" class="pd-input" placeholder="keyword1, keyword2, keyword3" autocomplete="off" />
+                </div>
+                <div id="pd-buttons">
+                    <div id="pd-btn-back" class="pd-btn focused">Back</div>
+                    <div id="pd-btn-save" class="pd-btn">Save</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── QR code overlay ── -->
+        <div id="qr-overlay" class="hidden">
+            <div id="qr-box">
+                <div id="qr-title">Scan to add profile</div>
+                <div id="qr-container"></div>
+                <div id="qr-hint">Scan with your phone, fill the form, then press OK</div>
+            </div>
+        </div>
+
+        <!-- ── Code entry overlay ── -->
+        <div id="code-overlay" class="hidden">
+            <div id="code-box-overlay">
+                <div id="code-title">Enter profile code</div>
+                <div id="code-hint">Type the code from your phone</div>
+                <input type="text" id="code-input" class="pd-input" placeholder="paste code here..." autocomplete="off" />
+            </div>
+        </div>
+
+        <div id="debug-log"></div>
+    </div>
+
+    <script>
+        if (typeof webapis === 'undefined') {
+            window.__BROWSER_MODE__ = true;
+            window.webapis = { avplay: {} };
+            window.tizen = { tvinputdevice: { registerKey: function() {} } };
+            document.getElementById('av-player').style.display = 'none';
+        }
+    </script>
+    <script src="js/playlist.js"></script>
+    <script src="js/xtream.js"></script>
+    <script src="js/tagger.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/qrcode.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

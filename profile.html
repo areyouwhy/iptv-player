@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV - Add Profile</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+        h1 {
+            font-size: 20px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #0a6e1e;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+        }
+        .field {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            color: #0a6e1e;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.15);
+            padding: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: #00ff41;
+            outline: none;
+            letter-spacing: 1px;
+        }
+        input::placeholder { color: #003b00; }
+        input:focus { border-bottom-color: #00ff41; }
+        .btn {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 32px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: #00ff41;
+            background: transparent;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:active { border-color: #00ff41; }
+        #result {
+            display: none;
+            margin-top: 32px;
+        }
+        #result h2 {
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        #result p {
+            font-size: 12px;
+            color: #0a6e1e;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        #code-box {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.15);
+            padding: 16px;
+            font-size: 13px;
+            word-break: break-all;
+            line-height: 1.6;
+            letter-spacing: 0.5px;
+            user-select: all;
+            -webkit-user-select: all;
+        }
+        #copy-btn {
+            margin-top: 12px;
+            padding: 10px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #0a0a0a;
+            background: #00ff41;
+            border: none;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+        }
+        #copy-btn:active { opacity: 0.8; }
+        .copied {
+            font-size: 13px;
+            color: #00ff41;
+            text-align: center;
+            margin-top: 8px;
+            display: none;
+        }
+        .error {
+            color: #c33;
+            font-size: 13px;
+            margin-top: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="form-section">
+            <h1>add profile</h1>
+            <div class="subtitle">fill in and generate a code for your TV</div>
+
+            <div class="field">
+                <label>Profile name</label>
+                <input type="text" id="f-name" placeholder="e.g. ruy" autocomplete="off" />
+            </div>
+            <div class="field">
+                <label>Username (playlist credential)</label>
+                <input type="text" id="f-user" placeholder="API username" autocomplete="off" />
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="f-pass" placeholder="API password" autocomplete="off" />
+            </div>
+            <div class="field">
+                <label>Search keywords</label>
+                <input type="text" id="f-keywords" placeholder="barca, madrid, premier league" autocomplete="off" />
+            </div>
+            <div class="error" id="error-msg"></div>
+            <button class="btn" id="gen-btn" onclick="generate()">Generate code</button>
+        </div>
+
+        <div id="result">
+            <h2>your profile code</h2>
+            <p>Enter this code on your TV to import the profile.</p>
+            <div id="code-box"></div>
+            <button id="copy-btn" onclick="copyCode()">Copy to clipboard</button>
+            <div class="copied" id="copied-msg">copied!</div>
+            <button class="btn" onclick="reset()" style="margin-top:16px;font-size:13px;padding:10px">create another</button>
+        </div>
+    </div>
+
+    <script>
+        function generate() {
+            var name = document.getElementById('f-name').value.trim();
+            var user = document.getElementById('f-user').value.trim();
+            var pass = document.getElementById('f-pass').value.trim();
+            var kw   = document.getElementById('f-keywords').value.trim();
+            var err  = document.getElementById('error-msg');
+
+            if (!name) {
+                err.textContent = 'profile name is required';
+                err.style.display = 'block';
+                return;
+            }
+            err.style.display = 'none';
+
+            // Build compact JSON: n=name, u=username, p=password, k=keywords
+            var obj = { n: name };
+            if (user) obj.u = user;
+            if (pass) obj.p = pass;
+            if (kw) obj.k = kw;
+
+            var code = btoa(JSON.stringify(obj));
+            document.getElementById('code-box').textContent = code;
+            document.getElementById('form-section').style.display = 'none';
+            document.getElementById('result').style.display = 'block';
+        }
+
+        function copyCode() {
+            var code = document.getElementById('code-box').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(function() {
+                    document.getElementById('copied-msg').style.display = 'block';
+                    setTimeout(function() { document.getElementById('copied-msg').style.display = 'none'; }, 2000);
+                });
+            } else {
+                // Fallback
+                var ta = document.createElement('textarea');
+                ta.value = code;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                document.getElementById('copied-msg').style.display = 'block';
+                setTimeout(function() { document.getElementById('copied-msg').style.display = 'none'; }, 2000);
+            }
+        }
+
+        function reset() {
+            document.getElementById('f-name').value = '';
+            document.getElementById('f-user').value = '';
+            document.getElementById('f-pass').value = '';
+            document.getElementById('f-keywords').value = '';
+            document.getElementById('form-section').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

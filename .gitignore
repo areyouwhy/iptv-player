@@ -1,0 +1,4 @@
+.DS_Store
+.buildResult/
+node_modules/
+profile-for-github/
