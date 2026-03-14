@@ -14,123 +14,73 @@
     ];
     var DEFAULT_CREDENTIALS = { username: '9b1f6b5188', password: '36690c9df5' };
 
-    // ── Category filters — only load these ──
-    var CATEGORY_FILTERS = [
-        'sweden', 'swedish', 'sverige', 'nordic', 'scandinavia', 'se ',
-        'se:', 'se|', 'se-',
-        'uk', 'united kingdom', 'england', 'english', 'gb', 'british',
-        'usa', 'us ', 'us:', 'us|', 'us-', 'united states', 'american',
-        'spain', 'spanish', 'espana', 'españa', 'es ', 'es:', 'es|', 'es-',
-        'la liga', 'liga',
-        'sport', 'football', 'soccer', 'futbol', 'fotboll',
-        'bein', 'dazn', 'espn',
-        'premium', 'vip'
-    ];
-
-    // ── Exclude categories starting with these prefixes ──
-    var CATEGORY_EXCLUDES = [
+    // ── Shared exclude list (reusable across profiles) ──
+    var EXCLUDES_ALL = [
         // Arabic / Middle East
         'ar ', 'ar:', 'ar|', 'ar-', 'arab', 'iraq', 'iq ', 'iq:', 'iq|',
         'sa ', 'sa:', 'sa|', 'saudi', 'ksa',
         'ae ', 'ae:', 'ae|', 'emirates', 'uae',
-        'kw ', 'kw:', 'kuwait',
-        'qa ', 'qa:', 'qatar',
-        'om ', 'om:', 'oman',
-        'bh ', 'bh:', 'bahrain',
-        'lb ', 'lb:', 'leban',
-        'jo ', 'jo:', 'jordan',
-        'sy ', 'sy:', 'syria',
-        'ps ', 'ps:', 'palest',
+        'kw ', 'kw:', 'kuwait', 'qa ', 'qa:', 'qatar',
+        'om ', 'om:', 'oman', 'bh ', 'bh:', 'bahrain',
+        'lb ', 'lb:', 'leban', 'jo ', 'jo:', 'jordan',
+        'sy ', 'sy:', 'syria', 'ps ', 'ps:', 'palest',
         'ye ', 'ye:', 'yemen',
         // Africa
         'af ', 'af:', 'af|', 'af-', 'afri', 'africa',
-        'ng ', 'ng:', 'niger',
-        'za ', 'za:', 'south afri',
-        'ke ', 'ke:', 'kenya',
-        'gh ', 'gh:', 'ghana',
-        'eg ', 'eg:', 'egypt',
-        'ma ', 'ma:', 'morocc',
-        'tn ', 'tn:', 'tunis',
-        'dz ', 'dz:', 'alger',
-        'ly ', 'ly:', 'libya',
-        'sd ', 'sd:', 'sudan',
+        'ng ', 'ng:', 'niger', 'za ', 'za:', 'south afri',
+        'ke ', 'ke:', 'kenya', 'gh ', 'gh:', 'ghana',
+        'eg ', 'eg:', 'egypt', 'ma ', 'ma:', 'morocc',
+        'tn ', 'tn:', 'tunis', 'dz ', 'dz:', 'alger',
+        'ly ', 'ly:', 'libya', 'sd ', 'sd:', 'sudan',
         'et ', 'et:', 'ethiop',
         // South / Southeast Asia
         'in ', 'in:', 'in|', 'in-', 'india', 'hindi', 'tamil', 'telugu', 'punjab', 'bangla',
-        'pk ', 'pk:', 'pk|', 'pakist',
-        'bd ', 'bd:', 'bangladesh',
-        'lk ', 'lk:', 'sri lanka',
-        'np ', 'np:', 'nepal',
+        'pk ', 'pk:', 'pk|', 'pakist', 'bd ', 'bd:', 'bangladesh',
+        'lk ', 'lk:', 'sri lanka', 'np ', 'np:', 'nepal',
         'ph ', 'ph:', 'philipp', 'pinoy', 'filipino',
-        'th ', 'th:', 'th|', 'thai',
-        'vn ', 'vn:', 'viet',
-        'my ', 'my:', 'malay',
-        'id ', 'id:', 'indo',
-        'mm ', 'mm:', 'myanmar',
-        'kh ', 'kh:', 'cambod',
+        'th ', 'th:', 'th|', 'thai', 'vn ', 'vn:', 'viet',
+        'my ', 'my:', 'malay', 'id ', 'id:', 'indo',
+        'mm ', 'mm:', 'myanmar', 'kh ', 'kh:', 'cambod',
         // East Asia
-        'cn ', 'cn:', 'china', 'chinese',
-        'jp ', 'jp:', 'japan',
-        'kr ', 'kr:', 'korea',
-        'tw ', 'tw:', 'taiwan',
+        'cn ', 'cn:', 'china', 'chinese', 'jp ', 'jp:', 'japan',
+        'kr ', 'kr:', 'korea', 'tw ', 'tw:', 'taiwan',
         'hk ', 'hk:', 'hong kong',
         // Turkey / Iran / Central Asia
         'tr ', 'tr:', 'tr|', 'tr-', 'turk',
         'ir ', 'ir:', 'ir|', 'iran', 'persi',
-        'af ', 'af:', 'afghan',
-        'uz ', 'uz:', 'uzbek',
-        'kz ', 'kz:', 'kazakh',
+        'afghan', 'uz ', 'uz:', 'uzbek', 'kz ', 'kz:', 'kazakh',
         // Eastern Europe
-        'ru ', 'ru:', 'ru|', 'ru-', 'russ',
-        'ua ', 'ua:', 'ukrain',
+        'ru ', 'ru:', 'ru|', 'ru-', 'russ', 'ua ', 'ua:', 'ukrain',
         'pl ', 'pl:', 'pl|', 'pl-', 'poli', 'polish',
-        'ro ', 'ro:', 'ro|', 'roman',
-        'bg ', 'bg:', 'bulgar',
-        'hu ', 'hu:', 'hungar',
-        'cz ', 'cz:', 'czech',
-        'sk ', 'sk:', 'slovak',
-        'hr ', 'hr:', 'croat',
-        'rs ', 'rs:', 'serb',
-        'ba ', 'ba:', 'bosn',
-        'si ', 'si:', 'sloven',
-        'mk ', 'mk:', 'macedon',
-        'al ', 'al:', 'al|', 'al-', 'alban',
-        'me ', 'me:', 'monteneg',
+        'ro ', 'ro:', 'ro|', 'roman', 'bg ', 'bg:', 'bulgar',
+        'hu ', 'hu:', 'hungar', 'cz ', 'cz:', 'czech',
+        'sk ', 'sk:', 'slovak', 'hr ', 'hr:', 'croat',
+        'rs ', 'rs:', 'serb', 'ba ', 'ba:', 'bosn',
+        'si ', 'si:', 'sloven', 'mk ', 'mk:', 'macedon',
+        'al ', 'al:', 'al|', 'al-', 'alban', 'me ', 'me:', 'monteneg',
         'ex ', 'ex-', 'ex:', 'ex|', 'ex yu', 'balkan',
-        'lt ', 'lt:', 'lithuan',
-        'lv ', 'lv:', 'latvi',
-        'ee ', 'ee:', 'eston',
-        'by ', 'by:', 'belarus',
+        'lt ', 'lt:', 'lithuan', 'lv ', 'lv:', 'latvi',
+        'ee ', 'ee:', 'eston', 'by ', 'by:', 'belarus',
         'md ', 'md:', 'moldov',
-        // Other European (not needed)
+        // Other European
         'gr ', 'gr:', 'greek', 'greece',
         'pt ', 'pt:', 'pt|', 'portug',
         'nl ', 'nl:', 'nl|', 'dutch', 'nether',
-        'be ', 'be:', 'belgi',
-        'at ', 'at:', 'austri',
+        'be ', 'be:', 'belgi', 'at ', 'at:', 'austri',
         'ch ', 'ch:', 'swiss',
         // Latin America
-        'br ', 'br:', 'br|', 'brazil',
-        'mx ', 'mx:', 'mexic',
-        'co ', 'co:', 'colomb',
-        'cl ', 'cl:', 'chile',
-        'pe ', 'pe:', 'peru',
-        've ', 've:', 'venezu',
-        'ar:', 'argent',
-        'cu ', 'cu:', 'cuba',
+        'br ', 'br:', 'br|', 'brazil', 'mx ', 'mx:', 'mexic',
+        'co ', 'co:', 'colomb', 'cl ', 'cl:', 'chile',
+        'pe ', 'pe:', 'peru', 've ', 've:', 'venezu',
+        'ar:', 'argent', 'cu ', 'cu:', 'cuba',
         'latam', 'latino',
-        // Caribbean
-        'jm ', 'jm:', 'jamaica',
-        'ht ', 'ht:', 'haiti',
+        'jm ', 'jm:', 'jamaica', 'ht ', 'ht:', 'haiti',
         // Misc
         'fr ', 'fr:', 'fr|', 'fr-', 'french', 'france',
         'de ', 'de:', 'de|', 'de-', 'german', 'deutsch',
         'it ', 'it:', 'it|', 'it-', 'ital',
-        'kurdish', 'kurd',
-        'somali',
-        'azerba', 'az ', 'az:',
-        'georgia',
-        'armen'
+        'kurdish', 'kurd', 'somali',
+        'azerba', 'az ', 'az:', 'georgia', 'armen'
     ];
 
     // ── Profiles ──
@@ -186,19 +136,40 @@
             displayName: 'ruy',
             username: '9b1f6b5188',
             password: '36690c9df5',
-            searches: ['barca', 'madrid', 'champions league', 'la liga', 'premier league']
+            searches: ['barca', 'madrid', 'champions league', 'la liga', 'premier league'],
+            categoryFilters: [
+                'sport', 'football', 'fotboll', 'soccer', 'futbol',
+                'premier league', 'champions league', 'la liga', 'serie a',
+                'bein', 'dazn', 'espn'
+            ],
+            categoryExcludes: EXCLUDES_ALL
         },
         {
             displayName: 'mama',
             username: 'a9de3d71b8',
             password: '78600dc309',
-            searches: []
+            searches: [],
+            categoryFilters: [
+                'sweden', 'swedish', 'sverige', 'nordic', 'scandinavia',
+                'se ', 'se:', 'se|', 'se-'
+            ],
+            categoryExcludes: EXCLUDES_ALL
         },
         {
             displayName: 'mattias',
             username: 'eb47f5e8c5',
             password: '454b464362',
-            searches: []
+            searches: [],
+            categoryFilters: [
+                'sweden', 'swedish', 'sverige', 'nordic', 'scandinavia',
+                'se ', 'se:', 'se|', 'se-',
+                'sport', 'football', 'fotboll', 'soccer',
+                'uk', 'united kingdom', 'england', 'english',
+                'usa', 'us ', 'us:', 'us|', 'us-',
+                'bein', 'dazn', 'espn',
+                'premium', 'vip'
+            ],
+            categoryExcludes: EXCLUDES_ALL
         }
     ];
     var userProfiles = HARDCODED_PROFILES;
@@ -494,8 +465,8 @@
                 workingHost = host;
                 onChannelsLoaded(result);
             },
-            CATEGORY_FILTERS,
-            CATEGORY_EXCLUDES
+            getActiveFilters(),
+            getActiveExcludes()
         );
     }
 
@@ -539,8 +510,8 @@
                 if (view === 'home') renderHome();
                 else if (view === 'channels' || view === 'groups') rebuildChannelList();
             },
-            CATEGORY_FILTERS,
-            CATEGORY_EXCLUDES
+            getActiveFilters(),
+            getActiveExcludes()
         );
     }
 
@@ -681,6 +652,20 @@
             return { username: activeProfile.username, password: activeProfile.password };
         }
         return DEFAULT_CREDENTIALS;
+    }
+
+    function getActiveFilters() {
+        if (activeProfile && activeProfile.categoryFilters) {
+            return activeProfile.categoryFilters;
+        }
+        return [];
+    }
+
+    function getActiveExcludes() {
+        if (activeProfile && activeProfile.categoryExcludes) {
+            return activeProfile.categoryExcludes;
+        }
+        return EXCLUDES_ALL;
     }
 
     function addSavedSearch(keyword) {
