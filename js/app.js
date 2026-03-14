@@ -73,19 +73,31 @@
         }
     ];
 
-    // ── User Profiles (localStorage) ──
-    // displayName = what shows on screen, username = API credential
-    var DEFAULT_PROFILE = {
-        displayName: 'ruy',
-        username: '9b1f6b5188',
-        password: '36690c9df5',
-        searches: ['barca', 'madrid', 'champions league', 'la liga', 'premier league']
-    };
-
-    // URL to the profile.html web form (host this file and set URL here)
-    var PROFILE_FORM_URL = 'https://areyouwhy.github.io/iptv-player/profile.html';
-    var userProfiles = [];
+    // ── User Profiles ──
+    // Hardcoded profiles: displayName = screen label, username/password = API credentials
+    var HARDCODED_PROFILES = [
+        {
+            displayName: 'ruy',
+            username: '9b1f6b5188',
+            password: '36690c9df5',
+            searches: ['barca', 'madrid', 'champions league', 'la liga', 'premier league']
+        },
+        {
+            displayName: 'mama',
+            username: 'a9de3d71b8',
+            password: '78600dc309',
+            searches: []
+        },
+        {
+            displayName: 'mattias',
+            username: 'eb47f5e8c5',
+            password: '454b464362',
+            searches: []
+        }
+    ];
+    var userProfiles = HARDCODED_PROFILES;
     var activeProfile = null;
+    var profilePickerOpen = false;
 
     // ── State ──
     var channels = [];
@@ -118,6 +130,7 @@
     var loadingEl     = document.getElementById('loading');
     var loadingHello  = document.getElementById('loading-hello');
     var loadingCat    = document.getElementById('loading-cat');
+    var loadingCatNames = document.getElementById('loading-cat-names');
     var loadingCh     = document.getElementById('loading-ch');
     var homeScreen    = document.getElementById('home-screen');
     var homeList      = document.getElementById('home-list');
@@ -145,6 +158,9 @@
     var qrContainer  = document.getElementById('qr-container');
     var codeOverlay  = document.getElementById('code-overlay');
     var codeInput    = document.getElementById('code-input');
+    var profilePicker = document.getElementById('profile-picker');
+    var profilePickerList = document.getElementById('profile-picker-list');
+    var pickerFocusIndex = 0;
 
     // ── Debug ──
     function debugLog(msg, type) {
@@ -182,6 +198,19 @@
         debugLogEl.style.display = 'none'; // hidden by default
         debugLog('starting', 'ok');
 
+        // First launch — show profile picker
+        if (!activeProfile) {
+            loadingEl.classList.add('hidden');
+            openProfilePicker();
+            return;
+        }
+
+        // Returning user — personalize and load channels
+        loadingHello.textContent = 'hello ' + activeProfile.displayName + '...';
+        startLoading();
+    }
+
+    function startLoading() {
         // Try cache first for instant startup
         var cached = Xtream.loadCache();
         if (cached && cached.channels && cached.channels.length > 0) {
@@ -297,6 +326,16 @@
     // ══════════════════════════════════════
 
     function updateLoadingStatus(text) {
+        // Intercept category stats message
+        if (text.indexOf('__CATEGORY_STATS__') === 0) {
+            try {
+                var stats = JSON.parse(text.substring(18));
+                loadingCat.textContent = 'categories: +' + stats.added + '  skipped: ' + stats.skipped;
+                loadingCatNames.textContent = stats.names.join(', ');
+            } catch(e) {}
+            return;
+        }
+
         // Parse status to show on the multi-line loading screen
         var t = text.toLowerCase();
         if (t.indexOf('/') !== -1 && t.indexOf('categor') !== -1) {
@@ -476,57 +515,45 @@
     // ══════════════════════════════════════
 
     function loadUserProfiles() {
+        userProfiles = HARDCODED_PROFILES;
+
+        // Load saved searches per profile from localStorage
         try {
-            var s = localStorage.getItem('iptv_user_profiles');
+            var s = localStorage.getItem('iptv_profile_searches');
             if (s) {
-                userProfiles = JSON.parse(s);
+                var saved = JSON.parse(s);
+                for (var p = 0; p < userProfiles.length; p++) {
+                    if (saved[userProfiles[p].displayName]) {
+                        userProfiles[p].searches = saved[userProfiles[p].displayName];
+                    }
+                }
             }
         } catch(e) {}
 
-        // Ensure default profile exists
-        if (userProfiles.length === 0) {
-            // Migrate old saved searches if present
-            var oldSearches = null;
-            try {
-                var os = localStorage.getItem('iptv_searches');
-                if (os) oldSearches = JSON.parse(os);
-            } catch(e) {}
-
-            userProfiles.push({
-                displayName: DEFAULT_PROFILE.displayName,
-                username: DEFAULT_PROFILE.username,
-                password: DEFAULT_PROFILE.password,
-                searches: (oldSearches && oldSearches.length > 0) ? oldSearches : DEFAULT_PROFILE.searches.slice()
-            });
-            saveUserProfiles();
-            // Clean up old key
-            try { localStorage.removeItem('iptv_searches'); } catch(e) {}
-        }
-
-        // Migrate old profiles: add displayName if missing (from name field)
-        for (var m = 0; m < userProfiles.length; m++) {
-            if (!userProfiles[m].displayName && userProfiles[m].name) {
-                userProfiles[m].displayName = userProfiles[m].name;
-                delete userProfiles[m].name;
-            }
-        }
-        saveUserProfiles();
-
-        // Load active profile
+        // Check if a profile was previously selected
         var activeName = null;
         try { activeName = localStorage.getItem('iptv_active_profile'); } catch(e) {}
         activeProfile = null;
-        for (var i = 0; i < userProfiles.length; i++) {
-            if (userProfiles[i].displayName === activeName) { activeProfile = userProfiles[i]; break; }
+        if (activeName) {
+            for (var i = 0; i < userProfiles.length; i++) {
+                if (userProfiles[i].displayName === activeName) { activeProfile = userProfiles[i]; break; }
+            }
         }
-        if (!activeProfile) activeProfile = userProfiles[0];
 
-        // Sync savedSearches to active profile
-        savedSearches = activeProfile.searches;
+        if (activeProfile) {
+            // Returning user — sync searches
+            savedSearches = activeProfile.searches;
+        }
+        // If no activeProfile, first launch — will show picker
     }
 
     function saveUserProfiles() {
-        try { localStorage.setItem('iptv_user_profiles', JSON.stringify(userProfiles)); } catch(e) {}
+        // Only persist searches per profile (profiles themselves are hardcoded)
+        var searches = {};
+        for (var i = 0; i < userProfiles.length; i++) {
+            searches[userProfiles[i].displayName] = userProfiles[i].searches;
+        }
+        try { localStorage.setItem('iptv_profile_searches', JSON.stringify(searches)); } catch(e) {}
     }
 
     function setActiveProfile(profile) {
@@ -568,21 +595,7 @@
         return false;
     }
 
-    function deleteUserProfile(profile) {
-        var idx = -1;
-        for (var i = 0; i < userProfiles.length; i++) {
-            if (userProfiles[i].displayName === profile.displayName) { idx = i; break; }
-        }
-        if (idx >= 0) {
-            userProfiles.splice(idx, 1);
-            saveUserProfiles();
-            if (activeProfile === profile) {
-                setActiveProfile(userProfiles[0] || null);
-            }
-            return true;
-        }
-        return false;
-    }
+    // deleteUserProfile removed — profiles are hardcoded
 
     // ══════════════════════════════════════
     // VIEWS
@@ -715,9 +728,7 @@
                 profileSectionStarted = true;
             }
         }
-        // + Add profile (QR scan) and manual add
-        items.push({ type: 'add-profile-qr', label: '+ Add profile (scan)', separator: !profileSectionStarted });
-        items.push({ type: 'add-profile', label: '+ Add profile (manual)' });
+        // Add-profile actions hidden (profiles are hardcoded)
 
         // Show/hide logs
         items.push({ type: 'toggle-logs', label: debugVisible ? 'Hide logs' : 'Show logs' });
@@ -1016,6 +1027,11 @@
     }
 
     document.addEventListener('keydown', function(e) {
+        // Profile picker intercept (first launch)
+        if (profilePickerOpen) {
+            if (handlePickerKey(e.keyCode)) e.preventDefault();
+            return;
+        }
         // Overlay key intercepts
         if (qrOverlayOpen) {
             if (handleQrKey(e.keyCode)) e.preventDefault();
@@ -1229,15 +1245,6 @@
                 while (focusedIndex < items.length && !isSelectableHomeItem(focusedIndex)) focusedIndex++;
                 renderHome();
             }
-        } else if (it.type === 'switch-profile') {
-            // Delete the profile (RED on a switch-profile item)
-            if (deleteUserProfile(it.userProfile)) {
-                debugLog('deleted profile: ' + it.userProfile.displayName, 'ok');
-                buildHomeItems();
-                if (focusedIndex >= items.length) focusedIndex = Math.max(0, items.length - 1);
-                while (focusedIndex < items.length && !isSelectableHomeItem(focusedIndex)) focusedIndex++;
-                renderHome();
-            }
         }
     }
 
@@ -1400,6 +1407,7 @@
     function switchToProfile(profile) {
         setActiveProfile(profile);
         debugLog('switched to profile: ' + profile.displayName, 'ok');
+        loadingHello.textContent = 'hello ' + profile.displayName + '...';
         showHome();
         try { localStorage.removeItem('iptv_cache'); } catch(e) {}
         tryXtreamHost(0);
@@ -1451,6 +1459,73 @@
         }
         return true;
     }
+
+    // ══════════════════════════════════════
+    // PROFILE PICKER (first launch)
+    // ══════════════════════════════════════
+
+    function openProfilePicker() {
+        profilePickerOpen = true;
+        pickerFocusIndex = 0;
+        renderProfilePicker();
+        profilePicker.classList.remove('hidden');
+    }
+
+    function closeProfilePicker() {
+        profilePickerOpen = false;
+        profilePicker.classList.add('hidden');
+    }
+
+    function renderProfilePicker() {
+        var html = '';
+        for (var i = 0; i < userProfiles.length; i++) {
+            var f = (i === pickerFocusIndex) ? ' focused' : '';
+            html += '<div class="picker-item' + f + '" data-i="' + i + '">' + esc(userProfiles[i].displayName) + '</div>';
+        }
+        profilePickerList.innerHTML = html;
+    }
+
+    function selectPickerProfile() {
+        var profile = userProfiles[pickerFocusIndex];
+        if (!profile) return;
+        setActiveProfile(profile);
+        closeProfilePicker();
+        debugLog('selected profile: ' + profile.displayName, 'ok');
+        loadingEl.classList.remove('hidden');
+        loadingHello.textContent = 'hello ' + profile.displayName + '...';
+        startLoading();
+    }
+
+    function handlePickerKey(k) {
+        if (!profilePickerOpen) return false;
+        if (k === 38) { // UP
+            if (pickerFocusIndex > 0) { pickerFocusIndex--; renderProfilePicker(); }
+            return true;
+        }
+        if (k === 40) { // DOWN
+            if (pickerFocusIndex < userProfiles.length - 1) { pickerFocusIndex++; renderProfilePicker(); }
+            return true;
+        }
+        if (k === 13) { // OK
+            selectPickerProfile();
+            return true;
+        }
+        return true; // consume all keys while picker is open
+    }
+
+    // Mouse support for picker
+    profilePickerList.addEventListener('click', function(e) {
+        var el = e.target.closest('.picker-item');
+        if (!el) return;
+        pickerFocusIndex = parseInt(el.getAttribute('data-i'), 10);
+        selectPickerProfile();
+    });
+    profilePickerList.addEventListener('mouseover', function(e) {
+        var el = e.target.closest('.picker-item');
+        if (!el) return;
+        pickerFocusIndex = parseInt(el.getAttribute('data-i'), 10);
+        renderProfilePicker();
+    });
 
     // ══════════════════════════════════════
     // QR CODE + CODE ENTRY

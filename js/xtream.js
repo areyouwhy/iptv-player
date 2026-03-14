@@ -222,7 +222,16 @@ var Xtream = (function() {
                 var categories;
                 if (categoryFilters && categoryFilters.length > 0) {
                     categories = filterCategories(allCategories, categoryFilters);
-                    onStatus(categories.length + '/' + allCategories.length + ' categories');
+                    var catNames = [];
+                    for (var c = 0; c < categories.length; c++) {
+                        catNames.push(categories[c].category_name);
+                    }
+                    onStatus('__CATEGORY_STATS__' + JSON.stringify({
+                        total: allCategories.length,
+                        added: categories.length,
+                        skipped: allCategories.length - categories.length,
+                        names: catNames
+                    }));
                 } else {
                     categories = allCategories;
                 }

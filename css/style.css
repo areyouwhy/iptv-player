@@ -105,6 +105,14 @@ body {
     letter-spacing: 1px;
     line-height: 1.6;
 }
+#loading-cat-names {
+    font-size: 14px !important;
+    color: var(--gdd) !important;
+    letter-spacing: 0.5px !important;
+    max-width: 600px;
+    line-height: 1.5 !important;
+    margin: 4px 0 12px 0;
+}
 
 #loading-brand {
     text-align: center;
@@ -572,5 +580,41 @@ body {
 }
 #code-input::placeholder { color: var(--gdd); }
 #code-input:focus { border-bottom-color: var(--g); box-shadow: 0 1px 0 var(--g); }
+
+/* ── Profile picker ── */
+#profile-picker {
+    position: absolute; top: 0; left: 0;
+    width: 1920px; height: 1080px;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 95;
+}
+#profile-picker-box {
+    text-align: center;
+}
+#picker-title {
+    font-family: var(--font);
+    font-size: 36px;
+    color: var(--g);
+    letter-spacing: 3px;
+    margin-bottom: 60px;
+}
+.picker-item {
+    font-family: var(--font);
+    font-size: 28px;
+    color: var(--gd);
+    padding: 18px 80px;
+    margin: 12px 0;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+}
+.picker-item.focused {
+    color: var(--g);
+    border-color: var(--gd);
+    background: rgba(0, 255, 65, 0.05);
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
 
 @keyframes blink { 50% { opacity: 0; } }
