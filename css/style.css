@@ -105,15 +105,6 @@ body {
     letter-spacing: 1px;
     line-height: 1.6;
 }
-#loading-cat-names {
-    font-size: 14px !important;
-    color: var(--gdd) !important;
-    letter-spacing: 0.5px !important;
-    max-width: 600px;
-    line-height: 1.5 !important;
-    margin: 4px 0 12px 0;
-}
-
 #loading-brand {
     text-align: center;
     font-size: 20px;
@@ -580,6 +571,63 @@ body {
 }
 #code-input::placeholder { color: var(--gdd); }
 #code-input:focus { border-bottom-color: var(--g); box-shadow: 0 1px 0 var(--g); }
+
+/* ── Category log ── */
+#category-log-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 1920px; height: 1080px;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 90;
+}
+#category-log-box {
+    width: 700px;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+}
+#category-log-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+}
+.cat-tab {
+    font-family: var(--font);
+    font-size: 20px;
+    color: var(--gdd);
+    letter-spacing: 2px;
+    padding: 12px 32px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+}
+.cat-tab.active {
+    color: var(--g);
+    border-bottom-color: var(--g);
+}
+#category-log-scroll {
+    overflow-y: auto;
+    max-height: 760px;
+}
+.cat-item {
+    font-family: var(--font);
+    font-size: 18px;
+    padding: 8px 16px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.04);
+}
+.cat-item-loaded { color: var(--g); }
+.cat-item-skipped { color: var(--gdd); }
+.cat-item-empty { color: var(--gdd); font-style: italic; }
+#category-log-hint {
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--gdd);
+    letter-spacing: 1px;
+    text-align: center;
+    margin-top: 16px;
+}
 
 /* ── Profile picker ── */
 #profile-picker {

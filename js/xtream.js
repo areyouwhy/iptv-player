@@ -100,13 +100,27 @@ var Xtream = (function() {
         return channels;
     }
 
-    // ── Filter categories by language/keyword rules ──
-    function filterCategories(allCategories, rules) {
+    // ── Filter categories by include keywords + exclude prefixes ──
+    function filterCategories(allCategories, rules, excludes) {
         if (!rules || rules.length === 0) return allCategories;
 
         var matched = [];
         for (var i = 0; i < allCategories.length; i++) {
             var catName = (allCategories[i].category_name || '').toLowerCase();
+
+            // Check excludes first — if category starts with an excluded prefix, skip it
+            var excluded = false;
+            if (excludes && excludes.length > 0) {
+                for (var e = 0; e < excludes.length; e++) {
+                    if (catName.indexOf(excludes[e].toLowerCase()) === 0) {
+                        excluded = true;
+                        break;
+                    }
+                }
+            }
+            if (excluded) continue;
+
+            // Check includes
             for (var r = 0; r < rules.length; r++) {
                 if (catName.indexOf(rules[r].toLowerCase()) !== -1) {
                     matched.push(allCategories[i]);
@@ -205,7 +219,7 @@ var Xtream = (function() {
     // MAIN LOAD — cache-first, background refresh
     // ══════════════════════════════════════════════
 
-    function loadAll(host, user, pass, onStatus, callback, categoryFilters) {
+    function loadAll(host, user, pass, onStatus, callback, categoryFilters, categoryExcludes) {
         init(host, user, pass);
 
         onStatus('Authenticating...');
@@ -221,16 +235,25 @@ var Xtream = (function() {
 
                 var categories;
                 if (categoryFilters && categoryFilters.length > 0) {
-                    categories = filterCategories(allCategories, categoryFilters);
-                    var catNames = [];
+                    categories = filterCategories(allCategories, categoryFilters, categoryExcludes);
+                    var addedNames = [];
+                    var skippedNames = [];
+                    var addedSet = {};
                     for (var c = 0; c < categories.length; c++) {
-                        catNames.push(categories[c].category_name);
+                        addedNames.push(categories[c].category_name);
+                        addedSet[categories[c].category_id] = true;
+                    }
+                    for (var s = 0; s < allCategories.length; s++) {
+                        if (!addedSet[allCategories[s].category_id]) {
+                            skippedNames.push(allCategories[s].category_name);
+                        }
                     }
                     onStatus('__CATEGORY_STATS__' + JSON.stringify({
                         total: allCategories.length,
                         added: categories.length,
                         skipped: allCategories.length - categories.length,
-                        names: catNames
+                        names: addedNames,
+                        skippedNames: skippedNames
                     }));
                 } else {
                     categories = allCategories;

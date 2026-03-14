@@ -27,6 +27,112 @@
         'premium', 'vip'
     ];
 
+    // ── Exclude categories starting with these prefixes ──
+    var CATEGORY_EXCLUDES = [
+        // Arabic / Middle East
+        'ar ', 'ar:', 'ar|', 'ar-', 'arab', 'iraq', 'iq ', 'iq:', 'iq|',
+        'sa ', 'sa:', 'sa|', 'saudi', 'ksa',
+        'ae ', 'ae:', 'ae|', 'emirates', 'uae',
+        'kw ', 'kw:', 'kuwait',
+        'qa ', 'qa:', 'qatar',
+        'om ', 'om:', 'oman',
+        'bh ', 'bh:', 'bahrain',
+        'lb ', 'lb:', 'leban',
+        'jo ', 'jo:', 'jordan',
+        'sy ', 'sy:', 'syria',
+        'ps ', 'ps:', 'palest',
+        'ye ', 'ye:', 'yemen',
+        // Africa
+        'af ', 'af:', 'af|', 'af-', 'afri', 'africa',
+        'ng ', 'ng:', 'niger',
+        'za ', 'za:', 'south afri',
+        'ke ', 'ke:', 'kenya',
+        'gh ', 'gh:', 'ghana',
+        'eg ', 'eg:', 'egypt',
+        'ma ', 'ma:', 'morocc',
+        'tn ', 'tn:', 'tunis',
+        'dz ', 'dz:', 'alger',
+        'ly ', 'ly:', 'libya',
+        'sd ', 'sd:', 'sudan',
+        'et ', 'et:', 'ethiop',
+        // South / Southeast Asia
+        'in ', 'in:', 'in|', 'in-', 'india', 'hindi', 'tamil', 'telugu', 'punjab', 'bangla',
+        'pk ', 'pk:', 'pk|', 'pakist',
+        'bd ', 'bd:', 'bangladesh',
+        'lk ', 'lk:', 'sri lanka',
+        'np ', 'np:', 'nepal',
+        'ph ', 'ph:', 'philipp', 'pinoy', 'filipino',
+        'th ', 'th:', 'th|', 'thai',
+        'vn ', 'vn:', 'viet',
+        'my ', 'my:', 'malay',
+        'id ', 'id:', 'indo',
+        'mm ', 'mm:', 'myanmar',
+        'kh ', 'kh:', 'cambod',
+        // East Asia
+        'cn ', 'cn:', 'china', 'chinese',
+        'jp ', 'jp:', 'japan',
+        'kr ', 'kr:', 'korea',
+        'tw ', 'tw:', 'taiwan',
+        'hk ', 'hk:', 'hong kong',
+        // Turkey / Iran / Central Asia
+        'tr ', 'tr:', 'tr|', 'tr-', 'turk',
+        'ir ', 'ir:', 'ir|', 'iran', 'persi',
+        'af ', 'af:', 'afghan',
+        'uz ', 'uz:', 'uzbek',
+        'kz ', 'kz:', 'kazakh',
+        // Eastern Europe
+        'ru ', 'ru:', 'ru|', 'ru-', 'russ',
+        'ua ', 'ua:', 'ukrain',
+        'pl ', 'pl:', 'pl|', 'pl-', 'poli', 'polish',
+        'ro ', 'ro:', 'ro|', 'roman',
+        'bg ', 'bg:', 'bulgar',
+        'hu ', 'hu:', 'hungar',
+        'cz ', 'cz:', 'czech',
+        'sk ', 'sk:', 'slovak',
+        'hr ', 'hr:', 'croat',
+        'rs ', 'rs:', 'serb',
+        'ba ', 'ba:', 'bosn',
+        'si ', 'si:', 'sloven',
+        'mk ', 'mk:', 'macedon',
+        'al ', 'al:', 'al|', 'al-', 'alban',
+        'me ', 'me:', 'monteneg',
+        'ex ', 'ex-', 'ex:', 'ex|', 'ex yu', 'balkan',
+        'lt ', 'lt:', 'lithuan',
+        'lv ', 'lv:', 'latvi',
+        'ee ', 'ee:', 'eston',
+        'by ', 'by:', 'belarus',
+        'md ', 'md:', 'moldov',
+        // Other European (not needed)
+        'gr ', 'gr:', 'greek', 'greece',
+        'pt ', 'pt:', 'pt|', 'portug',
+        'nl ', 'nl:', 'nl|', 'dutch', 'nether',
+        'be ', 'be:', 'belgi',
+        'at ', 'at:', 'austri',
+        'ch ', 'ch:', 'swiss',
+        // Latin America
+        'br ', 'br:', 'br|', 'brazil',
+        'mx ', 'mx:', 'mexic',
+        'co ', 'co:', 'colomb',
+        'cl ', 'cl:', 'chile',
+        'pe ', 'pe:', 'peru',
+        've ', 've:', 'venezu',
+        'ar:', 'argent',
+        'cu ', 'cu:', 'cuba',
+        'latam', 'latino',
+        // Caribbean
+        'jm ', 'jm:', 'jamaica',
+        'ht ', 'ht:', 'haiti',
+        // Misc
+        'fr ', 'fr:', 'fr|', 'fr-', 'french', 'france',
+        'de ', 'de:', 'de|', 'de-', 'german', 'deutsch',
+        'it ', 'it:', 'it|', 'it-', 'ital',
+        'kurdish', 'kurd',
+        'somali',
+        'azerba', 'az ', 'az:',
+        'georgia',
+        'armen'
+    ];
+
     // ── Profiles ──
     var PROFILES = [
         {
@@ -125,12 +231,13 @@
     var pdFocusIndex = 0;  // 0=name, 1=username, 2=password, 3=keywords, 4=back, 5=save
     var qrOverlayOpen = false;
     var codeEntryOpen = false;
+    var categoryLogOpen = false;
+    var lastCategoryStats = null;
 
     // ── DOM ──
     var loadingEl     = document.getElementById('loading');
     var loadingHello  = document.getElementById('loading-hello');
     var loadingCat    = document.getElementById('loading-cat');
-    var loadingCatNames = document.getElementById('loading-cat-names');
     var loadingCh     = document.getElementById('loading-ch');
     var homeScreen    = document.getElementById('home-screen');
     var homeList      = document.getElementById('home-list');
@@ -161,6 +268,11 @@
     var profilePicker = document.getElementById('profile-picker');
     var profilePickerList = document.getElementById('profile-picker-list');
     var pickerFocusIndex = 0;
+    var categoryLogOverlay = document.getElementById('category-log-overlay');
+    var categoryLogList = document.getElementById('category-log-list');
+    var catTabLoaded = document.getElementById('cat-tab-loaded');
+    var catTabSkipped = document.getElementById('cat-tab-skipped');
+    var categoryLogTab = 0; // 0=loaded, 1=skipped
 
     // ── Debug ──
     function debugLog(msg, type) {
@@ -330,8 +442,8 @@
         if (text.indexOf('__CATEGORY_STATS__') === 0) {
             try {
                 var stats = JSON.parse(text.substring(18));
-                loadingCat.textContent = 'categories: +' + stats.added + '  skipped: ' + stats.skipped;
-                loadingCatNames.textContent = stats.names.join(', ');
+                lastCategoryStats = stats;
+                loadingCat.textContent = 'categories: ' + stats.added + ' loaded, ' + stats.skipped + ' skipped';
             } catch(e) {}
             return;
         }
@@ -382,7 +494,8 @@
                 workingHost = host;
                 onChannelsLoaded(result);
             },
-            CATEGORY_FILTERS
+            CATEGORY_FILTERS,
+            CATEGORY_EXCLUDES
         );
     }
 
@@ -426,7 +539,8 @@
                 if (view === 'home') renderHome();
                 else if (view === 'channels' || view === 'groups') rebuildChannelList();
             },
-            CATEGORY_FILTERS
+            CATEGORY_FILTERS,
+            CATEGORY_EXCLUDES
         );
     }
 
@@ -730,6 +844,11 @@
         }
         // Add-profile actions hidden (profiles are hardcoded)
 
+        // Show category log
+        if (lastCategoryStats) {
+            items.push({ type: 'show-category-log', label: 'Show category log (' + lastCategoryStats.added + ' loaded, ' + lastCategoryStats.skipped + ' skipped)', separator: !profileSectionStarted });
+        }
+
         // Show/hide logs
         items.push({ type: 'toggle-logs', label: debugVisible ? 'Hide logs' : 'Show logs' });
     }
@@ -766,6 +885,9 @@
             }
             else if (it.type === 'add-profile') {
                 html += '<div class="hmi dim' + f + '" data-i="' + i + '">' + esc(it.label) + '</div>';
+            }
+            else if (it.type === 'show-category-log') {
+                html += '<div class="hmi dim' + sep + f + '" data-i="' + i + '">' + esc(it.label) + '</div>';
             }
             else if (it.type === 'toggle-logs') {
                 html += '<div class="hmi dim' + f + '" data-i="' + i + '">' + esc(it.label) + '</div>';
@@ -1032,6 +1154,11 @@
             if (handlePickerKey(e.keyCode)) e.preventDefault();
             return;
         }
+        // Category log intercept
+        if (categoryLogOpen) {
+            if (handleCategoryLogKey(e.keyCode)) e.preventDefault();
+            return;
+        }
         // Overlay key intercepts
         if (qrOverlayOpen) {
             if (handleQrKey(e.keyCode)) e.preventDefault();
@@ -1186,6 +1313,8 @@
             openQrOverlay();
         } else if (it.type === 'add-profile') {
             openProfileDialog();
+        } else if (it.type === 'show-category-log') {
+            openCategoryLog();
         } else if (it.type === 'toggle-logs') {
             debugVisible = !debugVisible;
             debugLogEl.style.display = debugVisible ? 'block' : 'none';
@@ -1457,6 +1586,63 @@
             closeProfileDialog();
             return true;
         }
+        return true;
+    }
+
+    // ══════════════════════════════════════
+    // CATEGORY LOG
+    // ══════════════════════════════════════
+
+    function openCategoryLog() {
+        if (!lastCategoryStats) return;
+        categoryLogOpen = true;
+        categoryLogTab = 0;
+        renderCategoryLog();
+        categoryLogOverlay.classList.remove('hidden');
+    }
+
+    function closeCategoryLog() {
+        categoryLogOpen = false;
+        categoryLogOverlay.classList.add('hidden');
+    }
+
+    function renderCategoryLog() {
+        // Update tabs
+        catTabLoaded.className = 'cat-tab' + (categoryLogTab === 0 ? ' active' : '');
+        catTabSkipped.className = 'cat-tab' + (categoryLogTab === 1 ? ' active' : '');
+        catTabLoaded.textContent = 'Loaded (' + lastCategoryStats.names.length + ')';
+        catTabSkipped.textContent = 'Skipped (' + lastCategoryStats.skippedNames.length + ')';
+
+        // Build list
+        var names = categoryLogTab === 0 ? lastCategoryStats.names : lastCategoryStats.skippedNames;
+        var cls = categoryLogTab === 0 ? 'cat-item-loaded' : 'cat-item-skipped';
+        var html = '';
+        for (var i = 0; i < names.length; i++) {
+            html += '<div class="cat-item ' + cls + '">' + esc(names[i]) + '</div>';
+        }
+        if (names.length === 0) {
+            html = '<div class="cat-item cat-item-empty">none</div>';
+        }
+        categoryLogList.innerHTML = html;
+        document.getElementById('category-log-scroll').scrollTop = 0;
+    }
+
+    function handleCategoryLogKey(k) {
+        if (!categoryLogOpen) return false;
+        if (k === 10009 || k === 27 || k === 8) {
+            closeCategoryLog();
+            return true;
+        }
+        // LEFT/RIGHT switch tabs
+        if (k === 37 || k === 39) {
+            categoryLogTab = categoryLogTab === 0 ? 1 : 0;
+            renderCategoryLog();
+            return true;
+        }
+        // UP/DOWN scroll
+        var logScroll = document.getElementById('category-log-scroll');
+        if (k === 40) { logScroll.scrollTop += 60; return true; }
+        if (k === 38) { logScroll.scrollTop -= 60; return true; }
         return true;
     }
 
