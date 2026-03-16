@@ -8,6 +8,7 @@
     <tizen:application id="iPlayerTV0.IPTVPlayer"
                        package="iPlayerTV0"
                        required_version="3.0"/>
+    <icon src="icon.png"/>
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.normal"/>
     <name>IPTVPlayer</name>

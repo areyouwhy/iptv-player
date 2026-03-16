@@ -150,15 +150,45 @@ var Tagger = (function() {
         return types;
     }
 
+    // ── Language from category prefix ──
+    var LANG_MAP = {
+        'SE': 'Swedish', 'SWE': 'Swedish', 'SWEDEN': 'Swedish',
+        'UK': 'English', 'GB': 'English', 'US': 'English', 'USA': 'English',
+        'ES': 'Spanish', 'SPA': 'Spanish', 'SPAIN': 'Spanish',
+        'FR': 'French', 'FRA': 'French',
+        'DE': 'German', 'GER': 'German',
+        'IT': 'Italian', 'ITA': 'Italian',
+        'PT': 'Portuguese', 'POR': 'Portuguese',
+        'NL': 'Dutch', 'NED': 'Dutch',
+        'NO': 'Norwegian', 'NOR': 'Norwegian',
+        'DK': 'Danish', 'DEN': 'Danish',
+        'FI': 'Finnish', 'FIN': 'Finnish'
+    };
+
+    function extractLanguage(groupName) {
+        if (!groupName) return null;
+        // Match prefix before delimiter: "SE | Viaplay" → "SE"
+        var m = groupName.match(/^([A-Za-z]{2,6})\s*[|:\-\/]/);
+        if (m) {
+            var code = m[1].toUpperCase();
+            if (LANG_MAP[code]) return LANG_MAP[code];
+        }
+        // Also check if group starts with a known code followed by space
+        var parts = groupName.toUpperCase().split(/\s+/);
+        if (parts[0] && LANG_MAP[parts[0]]) return LANG_MAP[parts[0]];
+        return null;
+    }
+
     // ── Main tagging function ──
-    // Adds .tags object to each channel: { country, quality, types[] }
+    // Adds .tags object to each channel: { country, quality, types[], language }
     function tagChannels(channels) {
         for (var i = 0; i < channels.length; i++) {
             var ch = channels[i];
             ch.tags = {
                 country: extractCountry(ch.name, ch.group || ''),
                 quality: extractQuality(ch.name),
-                types: extractTypes(ch.name, ch.group || '')
+                types: extractTypes(ch.name, ch.group || ''),
+                language: extractLanguage(ch.group || '')
             };
         }
         return channels;
@@ -221,6 +251,7 @@ var Tagger = (function() {
         filterByTag: filterByTag,
         extractCountry: extractCountry,
         extractQuality: extractQuality,
-        extractTypes: extractTypes
+        extractTypes: extractTypes,
+        extractLanguage: extractLanguage
     };
 })();

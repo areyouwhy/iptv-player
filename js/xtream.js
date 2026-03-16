@@ -2,11 +2,18 @@ var Xtream = (function() {
     'use strict';
 
     var baseUrl = '';
+    var rawHost = '';
     var username = '';
     var password = '';
 
     function init(host, user, pass) {
-        baseUrl = 'http://' + host;
+        rawHost = host;
+        // In browser mode, proxy through dev server to avoid CORS
+        if (window.__BROWSER_MODE__) {
+            baseUrl = '/api/' + host;
+        } else {
+            baseUrl = 'http://' + host;
+        }
         username = user;
         password = pass;
     }
@@ -101,8 +108,10 @@ var Xtream = (function() {
     }
 
     // ── Filter categories by include keywords + exclude prefixes ──
-    function filterCategories(allCategories, rules, excludes) {
+    // filterMode: 'contains' (default) or 'startsWith'
+    function filterCategories(allCategories, rules, excludes, filterMode) {
         if (!rules || rules.length === 0) return allCategories;
+        var useStartsWith = (filterMode === 'startsWith');
 
         var matched = [];
         for (var i = 0; i < allCategories.length; i++) {
@@ -122,7 +131,11 @@ var Xtream = (function() {
 
             // Check includes
             for (var r = 0; r < rules.length; r++) {
-                if (catName.indexOf(rules[r].toLowerCase()) !== -1) {
+                var rule = rules[r].toLowerCase();
+                var match = useStartsWith
+                    ? (catName.indexOf(rule) === 0)
+                    : (catName.indexOf(rule) !== -1);
+                if (match) {
                     matched.push(allCategories[i]);
                     break;
                 }
@@ -219,7 +232,7 @@ var Xtream = (function() {
     // MAIN LOAD — cache-first, background refresh
     // ══════════════════════════════════════════════
 
-    function loadAll(host, user, pass, onStatus, callback, categoryFilters, categoryExcludes) {
+    function loadAll(host, user, pass, onStatus, callback, categoryFilters, categoryExcludes, categoryFilterMode) {
         init(host, user, pass);
 
         onStatus('Authenticating...');
@@ -235,7 +248,7 @@ var Xtream = (function() {
 
                 var categories;
                 if (categoryFilters && categoryFilters.length > 0) {
-                    categories = filterCategories(allCategories, categoryFilters, categoryExcludes);
+                    categories = filterCategories(allCategories, categoryFilters, categoryExcludes, categoryFilterMode);
                     var addedNames = [];
                     var skippedNames = [];
                     var addedSet = {};
@@ -286,6 +299,111 @@ var Xtream = (function() {
         });
     }
 
+    // ══════════════════════════════════════════════
+    // VOD SERIES
+    // ══════════════════════════════════════════════
+
+    function seriesStreamUrl(episodeId, extension) {
+        extension = extension || 'mkv';
+        return baseUrl + '/series/' + username + '/' + password + '/' + episodeId + '.' + extension;
+    }
+
+    function getSeriesCategories(callback) {
+        request(apiUrl('get_series_categories'), 10000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || []);
+        });
+    }
+
+    function getSeriesByCategory(categoryId, callback) {
+        request(apiUrl('get_series', '&category_id=' + categoryId), 15000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || []);
+        });
+    }
+
+    function getSeriesInfo(seriesId, callback) {
+        request(apiUrl('get_series_info', '&series_id=' + seriesId), 15000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || {});
+        });
+    }
+
+    // Load all series across filtered categories
+    function loadSeriesBatched(categoryIds, onProgress, callback) {
+        var allSeries = [];
+        var loaded = 0;
+        var total = categoryIds.length;
+        var failed = 0;
+        var BATCH_SIZE = 4;
+
+        if (total === 0) {
+            callback(null, []);
+            return;
+        }
+
+        var nextIdx = 0;
+
+        function loadNext() {
+            if (nextIdx >= total && loaded + failed >= total) {
+                callback(null, allSeries);
+                return;
+            }
+            while (nextIdx < total && (nextIdx - loaded - failed) < BATCH_SIZE) {
+                startLoad(nextIdx);
+                nextIdx++;
+            }
+        }
+
+        function startLoad(idx) {
+            var catId = categoryIds[idx];
+            getSeriesByCategory(catId, function(err, series) {
+                if (err) {
+                    failed++;
+                } else {
+                    for (var i = 0; i < series.length; i++) {
+                        allSeries.push(series[i]);
+                    }
+                    loaded++;
+                }
+                onProgress(loaded, failed, total, allSeries.length);
+                loadNext();
+            });
+        }
+
+        loadNext();
+    }
+
+    // ══════════════════════════════════════════════
+    // VOD MOVIES
+    // ══════════════════════════════════════════════
+
+    function vodStreamUrl(streamId, extension) {
+        extension = extension || 'mkv';
+        return baseUrl + '/movie/' + username + '/' + password + '/' + streamId + '.' + extension;
+    }
+
+    function getVodCategories(callback) {
+        request(apiUrl('get_vod_categories'), 10000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || []);
+        });
+    }
+
+    function getVodByCategory(categoryId, callback) {
+        request(apiUrl('get_vod_streams', '&category_id=' + categoryId), 15000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || []);
+        });
+    }
+
+    function getVodInfo(vodId, callback) {
+        request(apiUrl('get_vod_info', '&vod_id=' + vodId), 15000, function(err, data) {
+            if (err) return callback(err);
+            callback(null, data || {});
+        });
+    }
+
     return {
         init: init,
         authenticate: authenticate,
@@ -296,6 +414,17 @@ var Xtream = (function() {
         filterCategories: filterCategories,
         loadCache: loadCache,
         saveWorkingHost: saveWorkingHost,
-        getWorkingHost: getWorkingHost
+        getWorkingHost: getWorkingHost,
+        // Series
+        seriesStreamUrl: seriesStreamUrl,
+        getSeriesCategories: getSeriesCategories,
+        getSeriesByCategory: getSeriesByCategory,
+        getSeriesInfo: getSeriesInfo,
+        loadSeriesBatched: loadSeriesBatched,
+        // VOD Movies
+        vodStreamUrl: vodStreamUrl,
+        getVodCategories: getVodCategories,
+        getVodByCategory: getVodByCategory,
+        getVodInfo: getVodInfo
     };
 })();

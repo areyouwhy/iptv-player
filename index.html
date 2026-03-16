@@ -14,6 +14,18 @@
             <object id="av-player" type="application/avplayer"></object>
         </div>
 
+        <!-- ── PiP (Picture-in-Picture) secondary stream ── -->
+        <div id="pip-container" class="hidden">
+            <video id="pip-player" muted playsinline></video>
+            <div id="pip-border"></div>
+            <div id="pip-label">PiP</div>
+        </div>
+
+        <!-- ── PiP audio indicator (flashes on swap) ── -->
+        <div id="pip-audio-indicator" class="hidden">
+            <div id="pip-audio-text"></div>
+        </div>
+
         <!-- ── Loading screen ── -->
         <div id="loading">
             <div id="loading-box">
@@ -34,9 +46,15 @@
             <div id="home-left">
                 <div id="home-header">what you do?</div>
                 <div id="home-list"></div>
+                <div id="home-eye"><img src="icon.png" alt="" /></div>
             </div>
             <div id="home-right">
                 <img id="welcome-img" src="assets/welcome_img.jpg" alt="" />
+                <div id="scores-panel" class="hidden">
+                    <div id="scores-header">today's games</div>
+                    <div id="scores-scroll"></div>
+                    <div id="scores-hint">press RIGHT to browse matches</div>
+                </div>
             </div>
         </div>
 
@@ -49,6 +67,7 @@
                     <input type="text" id="filter-input" placeholder="" autocomplete="off" />
                 </div>
                 <div id="channel-list"></div>
+                <div id="channel-counter"></div>
             </div>
             <div id="panel-right">
                 <div id="now-playing">
@@ -65,6 +84,55 @@
         <!-- ── Fullscreen overlay (just the info bar, player is already fullscreen) ── -->
         <div id="fs-overlay" class="hidden">
             <div id="fs-channel-info"></div>
+        </div>
+
+        <!-- ── Playback controls overlay (seek bar + state) ── -->
+        <div id="playback-controls" class="hidden">
+            <div id="playback-state"></div>
+            <div id="playback-bar-wrap">
+                <div id="playback-time-current">0:00</div>
+                <div id="playback-bar">
+                    <div id="playback-bar-fill"></div>
+                </div>
+                <div id="playback-time-total">0:00</div>
+            </div>
+        </div>
+
+        <!-- ── Subtitle display (rendered over fullscreen video) ── -->
+        <div id="subtitle-display" class="hidden">
+            <div id="subtitle-text"></div>
+        </div>
+
+        <!-- ── Subtitle track indicator (flashes on toggle) ── -->
+        <div id="subtitle-indicator" class="hidden">
+            <div id="subtitle-indicator-text"></div>
+        </div>
+
+        <!-- ── Left panel overlay (menu/channels while watching) ── -->
+        <div id="left-overlay" class="hidden">
+            <div id="lo-inner">
+                <div id="lo-header"></div>
+                <div id="lo-scroll"></div>
+                <div id="lo-hint"></div>
+            </div>
+        </div>
+
+        <!-- ── Live scores overlay (shown while watching) ── -->
+        <div id="scores-overlay" class="hidden">
+            <div id="scores-overlay-inner">
+                <div id="so-header">live scores</div>
+                <div id="so-scroll"></div>
+                <div id="so-hint">UP/DOWN browse · OK search · LEFT close</div>
+            </div>
+        </div>
+
+        <!-- ── VOD controls overlay (shown while watching VOD) ── -->
+        <div id="vod-overlay" class="hidden">
+            <div id="vod-overlay-inner">
+                <div id="vo-header">controls</div>
+                <div id="vo-scroll"></div>
+                <div id="vo-hint">UP/DOWN browse · OK select · LEFT close</div>
+            </div>
         </div>
 
         <div id="buffering">buffering...</div>
@@ -134,12 +202,38 @@
             </div>
         </div>
 
-        <!-- ── Profile picker (first launch) ── -->
+        <!-- ── Account picker (first, pick IPTV login) ── -->
+        <div id="account-picker" class="hidden">
+            <div id="account-picker-box">
+                <div id="account-picker-title">who?</div>
+                <div id="account-picker-list"></div>
+            </div>
+        </div>
+
+        <!-- ── Profile picker (then, pick what to watch) ── -->
         <div id="profile-picker" class="hidden">
             <div id="profile-picker-box">
-                <div id="picker-title">who's watching?</div>
+                <div id="picker-title">watch</div>
                 <div id="profile-picker-list"></div>
+                <div id="picker-separator"></div>
+                <div id="picker-quit" class="picker-item picker-quit-item">quit</div>
             </div>
+        </div>
+
+        <!-- ── Unsupported profile screen ── -->
+        <div id="unsupported-screen" class="screen hidden">
+            <div id="unsupported-box">
+                <div id="unsupported-title"></div>
+                <div id="unsupported-msg">Not yet supported.</div>
+                <div id="unsupported-hint">press BACK to return</div>
+            </div>
+        </div>
+
+        <!-- ── Goal notification toast ── -->
+        <div id="goal-toast">
+            <div class="goal-toast-title">GOAL!</div>
+            <div class="goal-toast-body"></div>
+            <div class="goal-toast-score"></div>
         </div>
 
         <div id="debug-log"></div>
@@ -148,15 +242,48 @@
     <script>
         if (typeof webapis === 'undefined') {
             window.__BROWSER_MODE__ = true;
-            window.webapis = { avplay: {} };
             window.tizen = { tvinputdevice: { registerKey: function() {} } };
             document.getElementById('av-player').style.display = 'none';
+
+            // Stub AVPlay API for browser testing
+            var _state = 'NONE';
+            window.webapis = { avplay: {
+                open: function(url) { _state = 'IDLE'; console.log('[BrowserPlayer] open:', url); },
+                close: function() { _state = 'NONE'; },
+                setDisplayRect: function() {},
+                setListener: function() {},
+                setStreamingProperty: function() {},
+                prepareAsync: function(ok, fail) { _state = 'READY'; if (ok) setTimeout(ok, 100); },
+                play: function() { _state = 'PLAYING'; console.log('[BrowserPlayer] play'); },
+                stop: function() { _state = 'IDLE'; },
+                pause: function() { _state = 'PAUSED'; },
+                getState: function() { return _state; },
+                getTotalTrackInfo: function() { return [
+                    { type: 'VIDEO', index: 0, extra_info: '' },
+                    { type: 'AUDIO', index: 1, extra_info: '' },
+                    { type: 'TEXT', index: 2, extra_info: 'English' },
+                    { type: 'TEXT', index: 3, extra_info: 'Swedish' }
+                ]; },
+                setSelectTrack: function(type, idx) { console.log('[BrowserPlayer] setSelectTrack:', type, idx); },
+                getCurrentTime: function() { return 30000; },
+                getDuration: function() { return 5400000; },
+                seekTo: function(pos, ok, fail) { console.log('[BrowserPlayer] seekTo:', pos); if (ok) ok(); }
+            }};
+            // Stub tizen audio control for browser
+            window.tizen = window.tizen || {};
+            window.tizen.tvaudiocontrol = {
+                setMute: function(m) { console.log('[BrowserAudio] mute:', m); },
+                isMute: function() { return false; }
+            };
+            // Register BLUE key for PiP
+            window.tizen.tvinputdevice.registerKey = function(k) { console.log('[BrowserInput] register:', k); };
         }
     </script>
     <script src="js/playlist.js"></script>
     <script src="js/xtream.js"></script>
     <script src="js/tagger.js"></script>
     <script src="js/player.js"></script>
+    <script src="js/football.js"></script>
     <script src="js/qrcode.min.js"></script>
     <script src="js/app.js"></script>
 </body>
