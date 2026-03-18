@@ -5,7 +5,7 @@
 export PATH="$HOME/tizen-studio/tools/ide/bin:$HOME/tizen-studio/tools:$PATH"
 
 TV=192.168.50.133:26101
-cd ~/iptv-player && \
+cd ~/Documents/projects/iptv-player && \
   rm -rf .buildResult && \
   tizen build-web -- . && \
   tizen package -t wgt -s IPTVProfile -- .buildResult && \
