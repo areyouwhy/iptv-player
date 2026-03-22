@@ -24,6 +24,10 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith('/football-api/'):
             self.proxy_football()
             return
+        # Proxy api-football (cups) calls
+        if self.path.startswith('/cups-api/'):
+            self.proxy_cups()
+            return
         # Serve static files normally
         super().do_GET()
 
@@ -60,6 +64,29 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         try:
             req = urllib.request.Request(url, headers={
                 'X-Auth-Token': token,
+                'User-Agent': 'Mozilla/5.0'
+            })
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            self.send_response(502)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(str(e).encode())
+
+    def proxy_cups(self):
+        # /cups-api/v3/fixtures?... → https://v3.football.api-sports.io/fixtures?...
+        rest = self.path[10:]  # strip "/cups-api/"
+        url = 'https://v3.football.api-sports.io/' + rest
+        token = self.headers.get('x-apisports-key', '')
+        try:
+            req = urllib.request.Request(url, headers={
+                'x-apisports-key': token,
                 'User-Agent': 'Mozilla/5.0'
             })
             with urllib.request.urlopen(req, timeout=15) as resp:

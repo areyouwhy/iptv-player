@@ -1,21 +1,41 @@
 var Football = (function() {
     'use strict';
 
-    // football-data.org v4 API (free tier: 10 req/min)
-    // Register at https://www.football-data.org/client/register for a free token
-    // In browser mode, proxy through dev server to avoid CORS
+    // ── Primary API: football-data.org v4 (free tier: 10 req/min) ──
+    // Leagues + Champions League
     var API_BASE = (window.__BROWSER_MODE__) ? '/football-api/v4' : 'https://api.football-data.org/v4';
     var API_TOKEN = '23bcec11f9a240e1a9292c7eca18c4ea';
 
-    // Competition codes (free tier)
+    // ── Secondary API: api-football (free tier: 100 req/day) ──
+    // Domestic cups not available on football-data.org free tier
+    var CUPS_API_BASE = (window.__BROWSER_MODE__) ? '/cups-api/v3' : 'https://v3.football.api-sports.io';
+    var CUPS_API_TOKEN = '205de6f0c19ebbfd7ef16235e3a53f10';
+
+    // Competition codes — football-data.org (leagues + CL)
     var COMPETITIONS = {
         PL:  { code: 'PL',  name: 'Premier League', flag: 'ENG' },
         PD:  { code: 'PD',  name: 'La Liga',        flag: 'ESP' },
         SA:  { code: 'SA',  name: 'Serie A',         flag: 'ITA' },
+        BL1: { code: 'BL1', name: 'Bundesliga',      flag: 'GER' },
+        FL1: { code: 'FL1', name: 'Ligue 1',         flag: 'FRA' },
         CL:  { code: 'CL',  name: 'Champions League', flag: 'EUR' }
     };
 
-    var COMP_CODES = 'PL,PD,SA,CL';
+    var COMP_CODES = 'PL,PD,SA,BL1,FL1,CL';
+
+    // Cup competitions — api-football (league IDs)
+    var CUP_COMPETITIONS = {
+        143:  { id: 143,  name: 'Copa del Rey',     flag: 'ESP', code: 'CDR' },
+        45:   { id: 45,   name: 'FA Cup',           flag: 'ENG', code: 'FAC' },
+        48:   { id: 48,   name: 'League Cup',       flag: 'ENG', code: 'LC'  },
+        137:  { id: 137,  name: 'Coppa Italia',     flag: 'ITA', code: 'CI'  },
+        81:   { id: 81,   name: 'DFB Pokal',        flag: 'GER', code: 'DFB' },
+        66:   { id: 66,   name: 'Coupe de France',  flag: 'FRA', code: 'CDF' },
+        3:    { id: 3,    name: 'Europa League',    flag: 'EUR', code: 'EL'  },
+        848:  { id: 848,  name: 'Conference League', flag: 'EUR', code: 'ECL' }
+    };
+
+    var CUP_IDS = '143-45-48-137-81-66-3-848';
 
     // Match statuses
     var STATUS_LIVE = ['IN_PLAY', 'PAUSED', 'LIVE'];
@@ -28,6 +48,12 @@ var Football = (function() {
     var CACHE_TTL_LIVE = 60 * 1000; // 1 minute when live matches exist
     var refreshTimer = null;
     var pendingCallbacks = null; // coalesce concurrent requests
+
+    // Separate cache for cup matches (api-football has tight daily limit)
+    var cachedCupMatches = null;
+    var cupCacheTime = 0;
+    var CUP_CACHE_TTL = 15 * 60 * 1000; // 15 min — conserve the 100 req/day limit
+    var CUP_CACHE_TTL_LIVE = 2 * 60 * 1000; // 2 min when live cup matches
 
     // Goal detection — track previous scores per match ID
     var previousScores = {};   // { matchId: { home: N, away: N } }
@@ -83,8 +109,13 @@ var Football = (function() {
     function fetchMatches(callback) {
         // Smart cache: shorter TTL when live matches are happening
         var ttl = hasLiveMatches() ? CACHE_TTL_LIVE : CACHE_TTL;
-        if (cachedMatches && (Date.now() - cacheTime < ttl)) {
-            callback(null, cachedMatches);
+        var leaguesFresh = cachedMatches && (Date.now() - cacheTime < ttl);
+
+        var cupTtl = hasLiveCupMatches() ? CUP_CACHE_TTL_LIVE : CUP_CACHE_TTL;
+        var cupsFresh = cachedCupMatches && (Date.now() - cupCacheTime < cupTtl);
+
+        if (leaguesFresh && cupsFresh) {
+            callback(null, mergeResults(cachedMatches, cachedCupMatches));
             return;
         }
 
@@ -95,10 +126,44 @@ var Football = (function() {
         }
         pendingCallbacks = [callback];
 
-        doFetch(0);
+        var leaguesResult = leaguesFresh ? cachedMatches : null;
+        var cupsResult = cupsFresh ? cachedCupMatches : null;
+        var done = 0;
+        var needed = (leaguesFresh ? 0 : 1) + (cupsFresh ? 0 : 1);
+
+        function checkDone() {
+            done++;
+            if (done < needed) return;
+            var leagues = leaguesResult || cachedMatches || [];
+            var cups = cupsResult || cachedCupMatches || [];
+            var merged = mergeResults(leagues, cups);
+            resolvePending(null, merged);
+        }
+
+        if (!leaguesFresh) {
+            doFetchLeagues(0, function(err, data) {
+                if (!err && data) leaguesResult = data;
+                checkDone();
+            });
+        }
+
+        if (!cupsFresh) {
+            doFetchCups(function(err, data) {
+                if (!err && data) cupsResult = data;
+                checkDone();
+            });
+        }
     }
 
-    function doFetch(attempt) {
+    function resolvePending(err, data) {
+        var cbs = pendingCallbacks;
+        pendingCallbacks = null;
+        for (var i = 0; i < cbs.length; i++) {
+            cbs[i](err, data);
+        }
+    }
+
+    function doFetchLeagues(attempt, done) {
         var url = API_BASE + '/matches?competitions=' + COMP_CODES;
 
         var xhr = new XMLHttpRequest();
@@ -106,25 +171,11 @@ var Football = (function() {
         xhr.setRequestHeader('X-Auth-Token', API_TOKEN);
         xhr.timeout = 15000; // 15s — more forgiving for Samsung TV
 
-        function resolve(err, data) {
-            var cbs = pendingCallbacks;
-            pendingCallbacks = null;
-            for (var i = 0; i < cbs.length; i++) {
-                cbs[i](err, data);
-            }
-        }
-
         function retry() {
             if (attempt < 2) {
-                // Wait 2s then retry
-                setTimeout(function() { doFetch(attempt + 1); }, 2000);
+                setTimeout(function() { doFetchLeagues(attempt + 1, done); }, 2000);
             } else {
-                // After 3 attempts, give up — but serve stale cache if we have one
-                if (cachedMatches) {
-                    resolve(null, cachedMatches);
-                } else {
-                    resolve('Failed after 3 attempts', null);
-                }
+                done(cachedMatches ? null : 'Failed after 3 attempts', cachedMatches);
             }
         }
 
@@ -135,20 +186,15 @@ var Football = (function() {
                 if (xhr.status === 200) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        var matches = parseMatches(data);
+                        var matches = parseLeagueMatches(data);
                         cachedMatches = matches;
                         cacheTime = Date.now();
-                        resolve(null, matches);
+                        done(null, matches);
                     } catch (e) {
-                        resolve('Parse error: ' + e.message, null);
+                        done('Parse error: ' + e.message, null);
                     }
                 } else if (xhr.status === 429) {
-                    // Rate limited — serve stale cache if available
-                    if (cachedMatches) {
-                        resolve(null, cachedMatches);
-                    } else {
-                        resolve('Rate limited — try again in a minute', null);
-                    }
+                    done(null, cachedMatches);
                 } else {
                     retry();
                 }
@@ -157,7 +203,53 @@ var Football = (function() {
         xhr.send();
     }
 
-    function parseMatches(apiData) {
+    function doFetchCups(done) {
+        // api-football: get today's fixtures for cup competitions
+        var today = new Date();
+        var dateStr = today.getFullYear() + '-' +
+            String(today.getMonth() + 1).padStart(2, '0') + '-' +
+            String(today.getDate()).padStart(2, '0');
+
+        var url = CUPS_API_BASE + '/fixtures?date=' + dateStr;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('x-apisports-key', CUPS_API_TOKEN);
+        xhr.timeout = 15000;
+
+        xhr.ontimeout = function() { done(null, cachedCupMatches); };
+        xhr.onerror = function() { done(null, cachedCupMatches); };
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        var cups = parseCupMatches(data);
+                        cachedCupMatches = cups;
+                        cupCacheTime = Date.now();
+                        done(null, cups);
+                    } catch (e) {
+                        done('Cup parse error: ' + e.message, null);
+                    }
+                } else {
+                    done(null, cachedCupMatches);
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    function hasLiveCupMatches() {
+        if (!cachedCupMatches) return false;
+        for (var g = 0; g < cachedCupMatches.length; g++) {
+            for (var m = 0; m < cachedCupMatches[g].matches.length; m++) {
+                if (cachedCupMatches[g].matches[m].isLive) return true;
+            }
+        }
+        return false;
+    }
+
+    function parseLeagueMatches(apiData) {
         var result = {};
         var matches = apiData.matches || [];
 
@@ -212,12 +304,83 @@ var Football = (function() {
             });
         }
 
-        // Sort competitions in display order
+        return sortByCompetition(result, ['CL', 'PL', 'PD', 'SA', 'BL1', 'FL1']);
+    }
+
+    // Parse api-football response into same format as league matches
+    function parseCupMatches(apiData) {
+        var result = {};
+        var fixtures = apiData.response || [];
+
+        for (var i = 0; i < fixtures.length; i++) {
+            var f = fixtures[i];
+            var leagueId = f.league ? f.league.id : 0;
+            var cup = CUP_COMPETITIONS[leagueId];
+            if (!cup) continue; // skip competitions we don't care about
+
+            var code = cup.code;
+            if (!result[code]) {
+                result[code] = {
+                    name: cup.name,
+                    flag: cup.flag,
+                    code: code,
+                    matches: []
+                };
+            }
+
+            // Map api-football status to football-data.org style
+            var status = mapCupStatus(f.fixture.status.short);
+            var minute = f.fixture.status.elapsed;
+
+            var homeScore = (f.goals && f.goals.home !== null) ? f.goals.home : null;
+            var awayScore = (f.goals && f.goals.away !== null) ? f.goals.away : null;
+            var htHome = (f.score && f.score.halftime && f.score.halftime.home !== null)
+                ? f.score.halftime.home : null;
+            var htAway = (f.score && f.score.halftime && f.score.halftime.away !== null)
+                ? f.score.halftime.away : null;
+
+            result[code].matches.push({
+                id: 'cup_' + f.fixture.id,  // prefix to avoid ID collisions
+                status: status,
+                minute: minute || null,
+                utcDate: f.fixture.date,
+                homeTeam: f.teams.home ? f.teams.home.name : '?',
+                homeTeamFull: f.teams.home ? f.teams.home.name : '?',
+                awayTeam: f.teams.away ? f.teams.away.name : '?',
+                awayTeamFull: f.teams.away ? f.teams.away.name : '?',
+                homeScore: homeScore,
+                awayScore: awayScore,
+                htHome: htHome,
+                htAway: htAway,
+                competition: code,
+                isLive: isLive(status),
+                isDone: isDone(status),
+                isUpcoming: isUpcoming(status),
+                isCup: true  // flag for match detail handling
+            });
+        }
+
+        return sortByCompetition(result, ['CDR', 'FAC', 'LC', 'CI', 'DFB', 'CDF', 'EL', 'ECL']);
+    }
+
+    // Map api-football status codes to football-data.org style
+    function mapCupStatus(shortStatus) {
+        var map = {
+            'TBD': 'TIMED', 'NS': 'SCHEDULED',
+            '1H': 'IN_PLAY', '2H': 'IN_PLAY', 'ET': 'IN_PLAY', 'P': 'IN_PLAY', 'LIVE': 'LIVE',
+            'HT': 'HALFTIME', 'BT': 'PAUSED',
+            'FT': 'FINISHED', 'AET': 'FINISHED', 'PEN': 'FINISHED',
+            'PST': 'POSTPONED', 'CANC': 'CANCELLED', 'SUSP': 'SUSPENDED',
+            'INT': 'SUSPENDED', 'ABD': 'CANCELLED', 'AWD': 'FINISHED', 'WO': 'FINISHED'
+        };
+        return map[shortStatus] || shortStatus;
+    }
+
+    // Sort grouped matches by competition display order
+    function sortByCompetition(result, order) {
         var ordered = [];
-        var order = ['CL', 'PL', 'PD', 'SA'];
         for (var o = 0; o < order.length; o++) {
             if (result[order[o]]) {
-                // Sort matches: live first, then upcoming by time, then finished
                 result[order[o]].matches.sort(function(a, b) {
                     var wa = a.isLive ? 0 : (a.isUpcoming ? 1 : 2);
                     var wb = b.isLive ? 0 : (b.isUpcoming ? 1 : 2);
@@ -228,6 +391,28 @@ var Football = (function() {
             }
         }
         return ordered;
+    }
+
+    // Unified display order across leagues and cups
+    var DISPLAY_ORDER = ['CL', 'EL', 'ECL', 'PD', 'CDR', 'PL', 'FAC', 'LC', 'SA', 'CI', 'BL1', 'DFB', 'FL1', 'CDF'];
+
+    // Merge league and cup results, sorted by unified display order
+    function mergeResults(leagues, cups) {
+        var byCode = {};
+        var sources = [leagues, cups];
+        for (var s = 0; s < sources.length; s++) {
+            if (!sources[s]) continue;
+            for (var i = 0; i < sources[s].length; i++) {
+                byCode[sources[s][i].code] = sources[s][i];
+            }
+        }
+        var merged = [];
+        for (var o = 0; o < DISPLAY_ORDER.length; o++) {
+            if (byCode[DISPLAY_ORDER[o]]) {
+                merged.push(byCode[DISPLAY_ORDER[o]]);
+            }
+        }
+        return merged;
     }
 
     // Detect score changes compared to previous poll
@@ -295,6 +480,7 @@ var Football = (function() {
         refreshTimer = setInterval(function() {
             // Force cache expiry so fetchMatches makes a real request
             cacheTime = 0;
+            cupCacheTime = 0;
             fetchMatches(function(err, data) {
                 if (!err && data) {
                     var goals = detectGoals(data);
@@ -635,6 +821,7 @@ var Football = (function() {
         fetchMatchDetails: fetchMatchDetails,
         isConfigured: isConfigured,
         setToken: setToken,
-        COMPETITIONS: COMPETITIONS
+        COMPETITIONS: COMPETITIONS,
+        CUP_COMPETITIONS: CUP_COMPETITIONS
     };
 })();

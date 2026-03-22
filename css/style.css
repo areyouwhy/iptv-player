@@ -143,6 +143,8 @@ body {
 #home-screen {
     display: flex;
     background: var(--bg);
+    height: 100%;
+    overflow: hidden;
 }
 /* When video is playing behind the home screen */
 #home-screen.video-behind {
@@ -1010,6 +1012,7 @@ body {
     padding: 30px 24px 16px;
     transform: translateX(100%);
     transition: transform 0.25s ease-out;
+    overflow: hidden;
 }
 #scores-overlay.visible {
     transform: translateX(0);
